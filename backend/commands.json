@@ -1,0 +1,136 @@
+{
+  "setup": {
+    "description": "Initial setup commands",
+    "steps": [
+      {
+        "name": "Create directories",
+        "commands": [
+          "mkdir -p uploads/images uploads/videos/standalone uploads/videos/posts",
+          "mkdir -p logs"
+        ]
+      },
+      {
+        "name": "Install dependencies",
+        "command": "npm install"
+      }
+    ]
+  },
+  "database": {
+    "description": "Database setup and migration commands",
+    "steps": [
+      {
+        "name": "Create database",
+        "command": "psql -U ${DB_USER} -c 'CREATE DATABASE ${DB_NAME}'"
+      },
+      {
+        "name": "Run migrations",
+        "command": "npm run migrate"
+      },
+      {
+        "name": "Seed initial data",
+        "command": "npm run seed"
+      }
+    ]
+  },
+  "docker": {
+    "description": "Docker commands for building and running containers",
+    "steps": [
+      {
+        "name": "Build backend image",
+        "command": "docker build -t blog-backend ."
+      },
+      {
+        "name": "Run PostgreSQL container",
+        "command": "docker run -d --name blog-db -e POSTGRES_PASSWORD=${DB_PASSWORD} -e POSTGRES_DB=${DB_NAME} -p 5432:5432 postgres:15-alpine"
+      },
+      {
+        "name": "Run backend container",
+        "command": "docker run -d --name blog-backend -p 5000:5000 --network blog-network -v $(pwd)/uploads:/app/uploads --env-file .env blog-backend"
+      }
+    ],
+    "volumes": {
+      "description": "Required Docker volumes",
+      "paths": [
+        {
+          "host": "./uploads",
+          "container": "/app/uploads",
+          "description": "Media files storage"
+        },
+        {
+          "host": "./logs",
+          "container": "/app/logs",
+          "description": "Application logs"
+        }
+      ]
+    },
+    "environment": {
+      "description": "Required environment variables",
+      "variables": {
+        "NODE_ENV": "production",
+        "PORT": "5000",
+        "DATABASE_URL": "postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}",
+        "UPLOAD_PATH": "/app/uploads",
+        "JWT_SECRET": "${JWT_SECRET}"
+      }
+    }
+  },
+  "development": {
+    "description": "Development mode commands",
+    "steps": [
+      {
+        "name": "Start in development mode",
+        "command": "npm run dev"
+      },
+      {
+        "name": "Run tests",
+        "command": "npm test"
+      },
+      {
+        "name": "Check code style",
+        "command": "npm run lint"
+      }
+    ]
+  },
+  "production": {
+    "description": "Production mode commands",
+    "steps": [
+      {
+        "name": "Build for production",
+        "command": "npm run build"
+      },
+      {
+        "name": "Start in production mode",
+        "command": "npm start"
+      }
+    ],
+    "deployment": {
+      "description": "Deployment checklist",
+      "steps": [
+        "Ensure all environment variables are set in .env",
+        "Run database migrations",
+        "Build Docker image",
+        "Push Docker image to registry",
+        "Deploy containers",
+        "Verify uploads directory permissions",
+        "Check application logs"
+      ]
+    }
+  },
+  "maintenance": {
+    "description": "Maintenance commands",
+    "steps": [
+      {
+        "name": "Backup database",
+        "command": "docker exec blog-db pg_dump -U ${DB_USER} ${DB_NAME} > ./backups/backup_$(date +%Y%m%d).sql"
+      },
+      {
+        "name": "Backup uploads",
+        "command": "tar -czf ./backups/uploads_$(date +%Y%m%d).tar.gz uploads/"
+      },
+      {
+        "name": "Clean old logs",
+        "command": "find logs/ -name \"*.log\" -mtime +30 -exec rm {} \\;"
+      }
+    ]
+  }
+}
