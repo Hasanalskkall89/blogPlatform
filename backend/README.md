@@ -148,7 +148,7 @@ backend/
    - Verify database credentials match in both `.env` and database setup:
      ```env
      DB_USER=admin
-     DB_PASSWORD=BlogAdmin@2024!
+     DB_PASSWORD=your_secure_password_here
      DB_HOST=database
      DB_PORT=5432
      ```
@@ -186,7 +186,7 @@ backend/
    - Verify admin credentials match in both `.env` and database:
      ```env
      ADMIN_USERNAME=admin
-     ADMIN_PASSWORD=BlogAdmin@2024!
+     ADMIN_PASSWORD=your_admin_password_here
      ```
    - Check token expiration settings:
      ```env
