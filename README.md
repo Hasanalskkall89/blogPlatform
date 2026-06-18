@@ -1,14 +1,14 @@
 # Blog Platform
 
-![Next.js](https://img.shields.io/badge/Next.js-000000?style=for-the-badge&logo=next.js&logoColor=white)
-![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
-![Node.js](https://img.shields.io/badge/Node.js-43853D?style=for-the-badge&logo=node.js&logoColor=white)
-![Express](https://img.shields.io/badge/Express-000000?style=for-the-badge&logo=express&logoColor=white)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-316192?style=for-the-badge&logo=postgresql&logoColor=white)
-![TailwindCSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)
-![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)
-![JWT](https://img.shields.io/badge/JWT-000000?style=for-the-badge&logo=json-web-tokens&logoColor=white)
-![License](https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge)
+![Next.js](https://img.shields.io/badge/Next.js-000000?style=flat&logo=next.js&logoColor=white)
+![React](https://img.shields.io/badge/React-20232A?style=flat&logo=react&logoColor=61DAFB)
+![Node.js](https://img.shields.io/badge/Node.js-43853D?style=flat&logo=node.js&logoColor=white)
+![Express](https://img.shields.io/badge/Express-000000?style=flat&logo=express&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-316192?style=flat&logo=postgresql&logoColor=white)
+![TailwindCSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=flat&logo=tailwind-css&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-2496ED?style=flat&logo=docker&logoColor=white)
+![JWT](https://img.shields.io/badge/JWT-000000?style=flat&logo=json-web-tokens&logoColor=white)
+![License](https://img.shields.io/badge/License-MIT-green.svg?style=flat)
 
 A comprehensive blog platform built with Next.js for frontend and Node.js for backend, featuring a modern admin dashboard and robust content management system.
 
@@ -173,8 +173,8 @@ For support, please open an issue in the GitHub repository.
 
 **Built with ❤️ by [Techlite](https://techlite.dev) using modern web technologies**
 
-![Made with Love](https://img.shields.io/badge/Made%20with-❤️-red?style=for-the-badge)
-![Open Source](https://img.shields.io/badge/Open%20Source-💚-green?style=for-the-badge)
-![Full Stack](https://img.shields.io/badge/Full%20Stack-🚀-blue?style=for-the-badge)
+![Made with Love](https://img.shields.io/badge/Made%20with-❤️-red?style=flat)
+![Open Source](https://img.shields.io/badge/Open%20Source-💚-green?style=flat)
+![Full Stack](https://img.shields.io/badge/Full%20Stack-🚀-blue?style=flat)
 
 </div>
