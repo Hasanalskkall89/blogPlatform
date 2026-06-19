@@ -2,25 +2,73 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --foreground-rgb: 0, 0, 0;
-  --background-start-rgb: 214, 219, 220;
-  --background-end-rgb: 255, 255, 255;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --foreground-rgb: 255, 255, 255;
-    --background-start-rgb: 0, 0, 0;
-    --background-end-rgb: 0, 0, 0;
+@layer base {
+  body {
+    @apply min-h-screen bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-100 transition-colors duration-200;
   }
 }
 
-body {
-  min-height: 100vh;
+/* Tiptap Editor Styles */
+.tiptap {
+  @apply outline-none;
 }
 
-/* RTL Support */
-*[dir="rtl"] .chakra-ui-rtl {
-  direction: rtl;
+.tiptap p.is-editor-empty:first-child::before {
+  @apply text-gray-400 dark:text-gray-500 float-right h-0 pointer-events-none;
+  content: attr(data-placeholder);
+}
+
+.tiptap h1 { @apply text-3xl font-bold mb-4 mt-6; }
+.tiptap h2 { @apply text-2xl font-bold mb-3 mt-5; }
+.tiptap h3 { @apply text-xl font-bold mb-2 mt-4; }
+.tiptap p { @apply mb-3 leading-relaxed; }
+.tiptap ul { @apply list-disc pr-6 mb-3; }
+.tiptap ol { @apply list-decimal pr-6 mb-3; }
+.tiptap li { @apply mb-1; }
+.tiptap blockquote {
+  @apply border-r-4 border-indigo-400 dark:border-indigo-500 pr-4 mr-0 italic text-gray-600 dark:text-gray-400 my-4;
+}
+.tiptap pre {
+  @apply bg-gray-900 dark:bg-gray-950 text-gray-100 rounded-lg p-4 my-4 overflow-x-auto text-sm font-mono;
+}
+.tiptap code {
+  @apply bg-gray-100 dark:bg-gray-700 text-pink-600 dark:text-pink-400 px-1.5 py-0.5 rounded text-sm font-mono;
+}
+.tiptap pre code {
+  @apply bg-transparent text-inherit p-0;
+}
+.tiptap hr {
+  @apply border-gray-200 dark:border-gray-700 my-6;
+}
+.tiptap a {
+  @apply text-indigo-600 dark:text-indigo-400 underline hover:text-indigo-800 dark:hover:text-indigo-300;
+}
+.tiptap img {
+  @apply rounded-lg max-w-full mx-auto my-4;
+}
+.tiptap table {
+  @apply w-full border-collapse my-4;
+}
+.tiptap th {
+  @apply border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 px-3 py-2 text-right font-semibold;
+}
+.tiptap td {
+  @apply border border-gray-300 dark:border-gray-600 px-3 py-2 text-right;
+}
+.tiptap mark {
+  @apply rounded px-0.5;
+}
+
+/* Scrollbar Styles */
+::-webkit-scrollbar {
+  @apply w-2;
+}
+::-webkit-scrollbar-track {
+  @apply bg-gray-100 dark:bg-gray-800;
+}
+::-webkit-scrollbar-thumb {
+  @apply bg-gray-300 dark:bg-gray-600 rounded-full;
+}
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-gray-400 dark:bg-gray-500;
 }

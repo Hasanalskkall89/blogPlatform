@@ -1,6 +1,8 @@
+require('dotenv').config();
 const express = require('express');
-const { Pool } = require('pg');
+const cors = require('cors');
 const config = require('./config');
+const { pool } = require('./db');
 const postsRouter = require('./routes/posts');
 const categoriesRouter = require('./routes/categories');
 const commentsRouter = require('./routes/comments');
@@ -12,26 +14,25 @@ const mediaRouter = require('./routes/media');
 const { adminAuth } = require('./middleware/auth');
 
 const app = express();
+app.set('etag', false);
 const port = config.port;
 
+// CORS
+app.use(cors(config.cors));
+
 // Increase allowed request size
-app.use(express.json({ limit: process.env.REQUEST_SIZE_LIMIT || '50mb' }));
-app.use(express.urlencoded({ limit: process.env.REQUEST_SIZE_LIMIT || '50mb', extended: true }));
+app.use(express.json({ limit: '100mb' }));
+app.use(express.urlencoded({ limit: '100mb', extended: true }));
 
-// Database connection setup
-const pool = new Pool({
-  connectionString: config.database.connectionString,
-  ssl: config.database.ssl
-});
-
-// Middleware
+// Middleware - Static file serving
 app.use('/api/posts/uploads', express.static('uploads'));
-app.use('/api/videos', express.static('uploads/videos'));
+app.use('/api/videos/standalone', express.static('uploads/videos/standalone'));
+app.use('/api/videos/posts', express.static('uploads/videos/posts'));
 
-// Get real IP behind proxy
+// Get real user IP behind proxy
 app.set('trust proxy', true);
 
-// Create uploads directory if it doesn't exist
+// Create uploads directory
 const fs = require('fs');
 if (!fs.existsSync(config.upload.path)) {
   fs.mkdirSync(config.upload.path, { recursive: true });
@@ -40,9 +41,9 @@ if (!fs.existsSync(config.upload.path)) {
 // Test database connection
 pool.connect((err, client, release) => {
   if (err) {
-    return console.error('Error connecting to database:', err.stack);
+    return console.error('Database connection error:', err.stack);
   }
-  console.log('Successfully connected to database');
+  console.log('Database connected successfully');
   release();
 });
 
@@ -79,3 +80,4 @@ app.use((err, req, res, next) => {
 app.listen(port, () => {
   console.log(`Server running on port ${port} in ${config.nodeEnv} environment`);
 });
+

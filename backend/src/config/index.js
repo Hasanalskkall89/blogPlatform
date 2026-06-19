@@ -1,12 +1,12 @@
 const config = {
     // Server Configuration
-    port: process.env.PORT || 5000,
+    port: parseInt(process.env.PORT) || 5000,
     nodeEnv: process.env.NODE_ENV || 'development',
 
     // Database Configuration
     database: {
         connectionString: process.env.DATABASE_URL,
-        ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+        ssl: false,
         poolConfig: {
             max: 20,
             idleTimeoutMillis: 30000,
@@ -16,7 +16,9 @@ const config = {
 
     // CORS Configuration
     cors: {
-        origin: process.env.CORS_ORIGINS ? process.env.CORS_ORIGINS.split(',') : [],
+        origin: process.env.CORS_ORIGINS
+            ? process.env.CORS_ORIGINS.split(',')
+            : ['http://localhost:3000', 'http://localhost:3001'],
         optionsSuccessStatus: 200,
         methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
         allowedHeaders: ['Content-Type', 'Authorization'],
@@ -34,15 +36,13 @@ const config = {
     // JWT Configuration
     jwt: {
         secret: process.env.JWT_SECRET,
-        expiresIn: process.env.JWT_EXPIRES_IN || '24h',
-        refreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d',
+        expiresIn: '24h',
+        refreshExpiresIn: '7d',
         algorithm: 'HS256'
     },
 
     // Admin Configuration
     admin: {
-        defaultUsername: process.env.ADMIN_USERNAME,
-        defaultPassword: process.env.ADMIN_PASSWORD,
         passwordMinLength: 8,
         passwordMaxLength: 100
     },
@@ -97,9 +97,14 @@ const config = {
     }
 };
 
-// Production overrides
-if (process.env.NODE_ENV === 'production') {
-    config.cors.origin = process.env.CORS_ORIGINS ? process.env.CORS_ORIGINS.split(',') : [];
+// Validate required env variables
+const required = ['DATABASE_URL', 'JWT_SECRET'];
+for (const key of required) {
+    if (!process.env[key]) {
+        console.error(`Missing required environment variable: ${key}`);
+        process.exit(1);
+    }
 }
 
 module.exports = config;
+

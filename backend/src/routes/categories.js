@@ -1,15 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const { Pool } = require('pg');
 const { categoryValidators } = require('../middleware/validators');
 const { adminAuth } = require('../middleware/auth');
-const config = require('../config');
-
-// Database connection setup
-const pool = new Pool({
-  connectionString: config.database.connectionString,
-  ssl: config.database.ssl
-});
+const { pool } = require('../db');
 
 // Get all categories - Public access
 router.get('/', async (req, res, next) => {

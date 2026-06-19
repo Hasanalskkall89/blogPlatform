@@ -1,12 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const { Pool } = require('pg');
 const { likeValidators } = require('../middleware/validators');
-
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
-});
+const { pool } = require('../db');
 
 // Add like to a post
 router.post('/post/:postId', likeValidators.toggle, async (req, res, next) => {

@@ -1,12 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const { Pool } = require('pg');
 const { commentValidators } = require('../middleware/validators');
-
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
-});
+const { adminAuth } = require('../middleware/auth');
+const { pool } = require('../db');
 
 // Get comments for a specific post
 router.get('/post/:postId', commentValidators.create[0], async (req, res, next) => {
@@ -84,7 +80,7 @@ router.post('/post/:postId', commentValidators.create, async (req, res, next) =>
 });
 
 // [ADMIN] Delete comment
-router.delete('/:id', commentValidators.delete, async (req, res, next) => {
+router.delete('/:id', adminAuth, commentValidators.delete, async (req, res, next) => {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -112,7 +108,7 @@ router.delete('/:id', commentValidators.delete, async (req, res, next) => {
 });
 
 // [ADMIN] Enable/disable comments for a post
-router.put('/toggle/:postId', commentValidators.create[0], async (req, res, next) => {
+router.put('/toggle/:postId', adminAuth, commentValidators.create[0], async (req, res, next) => {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');

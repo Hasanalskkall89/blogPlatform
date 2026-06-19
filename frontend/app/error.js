@@ -1,23 +1,17 @@
 'use client';
 
-import { useTheme } from './context/ThemeContext';
-import { colors } from './theme/colors';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { FiRefreshCcw, FiHome, FiArrowRight } from 'react-icons/fi';
+import config from './config';
 
-export default function Error({
-  error,
-  reset,
-}) {
-  const { theme } = useTheme();
-  const themeColors = colors[theme];
+export default function Error({ error, reset }) {
   const router = useRouter();
 
   return (
-    <div className={`min-h-screen ${themeColors.background} flex items-center justify-center p-4`}>
-      <div className={`max-w-xl w-full ${themeColors.cardBackground} rounded-2xl shadow-xl p-6 md:p-8 text-center`}>
+    <div className="min-h-screen flex items-center justify-center p-4">
+      <div className="max-w-xl w-full bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 md:p-8 text-center">
         <div className="mb-6">
           <div className="w-32 h-32 mx-auto mb-6 relative">
             <Image
@@ -28,10 +22,10 @@ export default function Error({
               className="rounded-full shadow-lg"
             />
           </div>
-          <h1 className={`text-2xl md:text-3xl font-bold ${themeColors.text} mb-4`}>
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-800 dark:text-gray-100 mb-4">
             Sorry, an unexpected error occurred
           </h1>
-          <p className={`${themeColors.secondaryText} text-sm md:text-base mb-8`}>
+          <p className="text-gray-600 dark:text-gray-300 text-sm md:text-base mb-8">
             {error?.message || 'An error occurred while loading the page. Please try again.'}
           </p>
         </div>
@@ -63,10 +57,10 @@ export default function Error({
         </div>
 
         <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
-          <p className={`${themeColors.secondaryText} text-sm`}>
+          <p className="text-gray-600 dark:text-gray-300 text-sm">
             If the problem persists, please contact 
             <a 
-              href={`mailto:${process.env.NEXT_PUBLIC_CONTACT_EMAIL}`}
+              href={`mailto:${config.email}`}
               className="text-blue-500 hover:underline mx-1"
             >
               Support Team
@@ -77,3 +71,4 @@ export default function Error({
     </div>
   );
 }
+

@@ -1,22 +1,19 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useTheme } from '../../context/ThemeContext';
-import { colors } from '../../theme/colors';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
+import { API_URL, BASE_URL } from '../../lib/api';
 
 export default function VideoPage() {
   const params = useParams();
   const videoId = params.id;
-  const { theme } = useTheme();
-  const themeColors = colors[theme];
   const [video, setVideo] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/videos/standalone-videos/${videoId}`)
+    fetch(`${API_URL}/videos/standalone-videos/${videoId}`)
       .then(res => {
         if (!res.ok) {
           throw new Error('Video not found');
@@ -36,7 +33,7 @@ export default function VideoPage() {
 
   if (loading) {
     return (
-      <div className={`min-h-screen ${themeColors.background} flex items-center justify-center`}>
+      <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
       </div>
     );
@@ -44,11 +41,11 @@ export default function VideoPage() {
 
   if (error || !video) {
     return (
-      <div className={`min-h-screen ${themeColors.background} flex items-center justify-center flex-col`}>
-        <h1 className={`text-xl ${themeColors.text} mb-4`}>
+      <div className="min-h-screen flex items-center justify-center flex-col">
+        <h1 className="text-xl text-gray-800 dark:text-gray-100 mb-4">
           {error || 'Video not found'}
         </h1>
-        <Link href="/videos" className={`${themeColors.text} hover:underline`}>
+        <Link href="/videos" className="text-gray-800 dark:text-gray-100 hover:underline">
           Back to Videos
         </Link>
       </div>
@@ -56,42 +53,62 @@ export default function VideoPage() {
   }
 
   return (
-    <div className={`min-h-screen ${themeColors.background} p-6`}>
-      <div className="max-w-4xl mx-auto">
-        <div className="mb-6">
-          <Link
-            href="/videos"
-            className={`${themeColors.text} hover:opacity-80 transition-opacity inline-flex items-center`}
-          >
-            ← Back to Videos
-          </Link>
-        </div>
+    <div className="min-h-screen py-6">
+      <div className="container mx-auto px-4 max-w-4xl">
+        {/* Breadcrumbs */}
+        <nav className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mb-6" aria-label="Breadcrumb">
+          <Link href="/" className="hover:text-blue-500 transition-colors">Home</Link>
+          <span>/</span>
+          <Link href="/videos" className="hover:text-blue-500 transition-colors">Videos</Link>
+          <span>/</span>
+          <span className="text-gray-700 dark:text-gray-200 truncate max-w-[200px]">{video.title}</span>
+        </nav>
 
-        <div className={`${themeColors.cardBackground} rounded-lg shadow-lg overflow-hidden`}>
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
           <div className="aspect-video">
             <video
               className="w-full h-full"
               controls
               autoPlay
             >
-              <source src={`${process.env.NEXT_PUBLIC_API_URL}${video.video_url}`} type="video/mp4" />
+              <source src={`${BASE_URL}${video.video_url}`} type="video/mp4" />
               Your browser does not support video playback.
             </video>
           </div>
           
           <div className="p-6">
-            <h1 className={`text-2xl font-bold ${themeColors.text} mb-4`}>
+            <h1 className="text-2xl md:text-3xl font-bold text-gray-800 dark:text-gray-100 mb-4">
               {video.title}
             </h1>
+            <div className="flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400 mb-4">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              {new Date(video.created_at).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+              })}
+            </div>
             {video.description && (
-              <p className={`${themeColors.secondaryText} mb-4 whitespace-pre-wrap`}>
+              <p className="text-gray-600 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">
                 {video.description}
               </p>
             )}
-            <div className={`text-sm ${themeColors.secondaryText}`}>
-              Published: {new Date(video.created_at).toLocaleDateString('en-US')}
-            </div>
           </div>
+        </div>
+
+        {/* Back Button */}
+        <div className="mt-8">
+          <Link
+            href="/videos"
+            className="inline-flex items-center gap-2 text-blue-600 dark:text-blue-400 hover:underline font-medium"
+          >
+            <svg className="w-4 h-4 rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+            </svg>
+            Back to Videos
+          </Link>
         </div>
       </div>
     </div>

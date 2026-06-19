@@ -1,13 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const { Pool } = require('pg');
 const { adminAuth } = require('../middleware/auth');
-const config = require('../config');
-
-// Database connection setup
-const pool = new Pool({
-  connectionString: config.database.connectionString,
-});
+const { pool } = require('../db');
 
 // Get all standalone videos
 router.get('/standalone-videos', async (req, res) => {
@@ -53,14 +47,13 @@ router.post('/standalone-videos', adminAuth, async (req, res) => {
   const client = await pool.connect();
   try {
     const { title, description, video_url } = req.body;
-    console.log('Creating video with data:', { title, description, video_url });
     
-    // Check required data
+    // Validate required data
     if (!title || !video_url) {
       return res.status(400).json({ message: 'Title and video URL are required' });
     }
 
-    // Clean the URL path
+    // Clean URL path
     const cleanVideoUrl = (url) => {
       // Remove domain if present
       let cleanUrl = url.replace(/^https?:\/\/[^\/]+/, '');
@@ -72,7 +65,6 @@ router.post('/standalone-videos', adminAuth, async (req, res) => {
     };
 
     const finalVideoUrl = cleanVideoUrl(video_url);
-    console.log('Clean URL:', { finalVideoUrl });
 
     const result = await client.query(
       `INSERT INTO standalone_videos (title, description, video_url)
@@ -96,14 +88,13 @@ router.put('/standalone-videos/:id', adminAuth, async (req, res) => {
   try {
     const { id } = req.params;
     const { title, description, video_url } = req.body;
-    console.log('Updating video with data:', { id, title, description, video_url });
 
-    // Check required data
+    // Validate required data
     if (!title || !video_url) {
       return res.status(400).json({ message: 'Title and video URL are required' });
     }
 
-    // Clean the URL path
+    // Clean URL path
     const cleanVideoUrl = (url) => {
       // Remove domain if present
       let cleanUrl = url.replace(/^https?:\/\/[^\/]+/, '');
@@ -115,7 +106,6 @@ router.put('/standalone-videos/:id', adminAuth, async (req, res) => {
     };
 
     const finalVideoUrl = cleanVideoUrl(video_url);
-    console.log('Clean URL:', { finalVideoUrl });
 
     const result = await client.query(
       `UPDATE standalone_videos 
@@ -162,3 +152,4 @@ router.delete('/standalone-videos/:id', adminAuth, async (req, res) => {
 });
 
 module.exports = router;
+

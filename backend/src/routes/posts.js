@@ -1,18 +1,13 @@
 const express = require('express');
 const router = express.Router();
-const { Pool } = require('pg');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const config = require('../config');
+const { adminAuth } = require('../middleware/auth');
+const { pool } = require('../db');
 
-// Database connection setup
-const pool = new Pool({
-  connectionString: config.database.connectionString,
-  ssl: config.database.ssl
-});
-
-// Multer setup for file uploads
+// Configure multer for file uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     let uploadPath;
@@ -27,7 +22,7 @@ const storage = multer.diskStorage({
     cb(null, uploadPath);
   },
   filename: (req, file, cb) => {
-    // Use original filename with timestamp to avoid duplicates
+    // Use original filename with timestamp to avoid name conflicts
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
     const ext = path.extname(file.originalname);
     cb(null, uniqueSuffix + ext);
@@ -40,17 +35,28 @@ const upload = multer({
     fileSize: parseInt(config.upload.maxFileSize)
   },
   fileFilter: (req, file, cb) => {
-    // Check file type
+    // Validate file type
     if (file.mimetype.startsWith('image/') || file.mimetype.startsWith('video/')) {
       cb(null, true);
     } else {
-      cb(new Error('Unsupported file type'));
+      cb(new Error('File type not supported'));
     }
   }
 });
 
 // Serve uploaded files
 router.use('/uploads', express.static(path.join(__dirname, '../../uploads')));
+
+// Disable caching for all post routes
+router.use((req, res, next) => {
+  res.set({
+    'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+    'Pragma': 'no-cache',
+    'Expires': '0',
+    'Surrogate-Control': 'no-store'
+  });
+  next();
+});
 
 // Get all posts
 router.get('/', async (req, res, next) => {
@@ -73,10 +79,11 @@ router.get('/', async (req, res, next) => {
       ORDER BY p.created_at DESC
     `);
     
-    // Clean up null media arrays
+    // Clean up null media arrays and add nested category object
     result.rows = result.rows.map(post => ({
       ...post,
-      media: post.media[0] === null ? [] : post.media
+      media: post.media[0] === null ? [] : post.media,
+      category: post.category_id ? { id: post.category_id, name: post.category_name } : null
     }));
     
     res.json(result.rows);
@@ -108,6 +115,7 @@ router.get('/:id', async (req, res, next) => {
     
     const post = postResult.rows[0];
     post.media = mediaResult.rows;
+    post.category = post.category_id ? { id: post.category_id, name: post.category_name } : null;
     
     res.json(post);
   } catch (err) {
@@ -116,51 +124,36 @@ router.get('/:id', async (req, res, next) => {
 });
 
 // Create new post with multiple media support
-router.post('/', async (req, res, next) => {
+router.post('/', adminAuth, async (req, res, next) => {
   const client = await pool.connect();
   try {
-    console.log('Received request body:', req.body);
-    
     await client.query('BEGIN');
     
     const { title, content, category_id, media } = req.body;
-    console.log('Extracted data:', { title, content, category_id, mediaCount: media?.length });
     
     if (!title || !content || !category_id) {
       throw new Error('Required data is incomplete');
     }
     
-    // Validate media URLs
-    function validateMediaUrl(url, type) {
-        if (!url) return false;
-        
-        // Check if URL starts with the correct path
-        if (!url.startsWith('/api/posts/uploads/')) {
-            return false;
-        }
-        
-        // Validate file type based on URL
-        if (type === 'image' && !url.match(/\.(jpg|jpeg|png|gif)$/i)) {
-            return false;
-        }
-        if (type === 'video' && !url.match(/\.(mp4|webm|ogg)$/i)) {
-            return false;
-        }
-        
-        return true;
-    }
+    // Validate media paths
+    const validateMediaUrl = (url, type) => {
+      if (type === 'image') {
+        return url.startsWith('/api/posts/uploads/images/');
+      } else if (type === 'video') {
+        return url.startsWith('/api/posts/uploads/videos/posts/');
+      }
+      return false;
+    };
 
     // Validate all media items
     if (media && media.length > 0) {
-      console.log('Validating media items:', media);
       const invalidMedia = media.find(item => !validateMediaUrl(item.media_url, item.media_type));
       if (invalidMedia) {
-        throw new Error(`Invalid media URL: ${invalidMedia.media_url}`);
+        throw new Error(`Invalid media path: ${invalidMedia.media_url}`);
       }
     }
     
     // Create post
-    console.log('Creating post with values:', [title, content, category_id]);
     const postResult = await client.query(`
       INSERT INTO posts (title, content, category_id) 
       VALUES ($1, $2, $3) 
@@ -168,17 +161,10 @@ router.post('/', async (req, res, next) => {
     `, [title, content, category_id]);
     
     const post = postResult.rows[0];
-    console.log('Post created:', post);
 
-    // Add specified media
+    // Add selected media
     if (media && media.length > 0) {
       for (const item of media) {
-        console.log('Adding media:', { 
-          postId: post.id, 
-          mediaUrl: item.media_url, 
-          mediaType: item.media_type 
-        });
-        
         await client.query(`
           INSERT INTO post_media (post_id, media_url, media_type) 
           VALUES ($1, $2, $3)
@@ -192,7 +178,7 @@ router.post('/', async (req, res, next) => {
 
     await client.query('COMMIT');
     
-    // Get post with associated media
+    // Fetch post with associated media
     const finalResult = await client.query(`
       SELECT 
         p.*,
@@ -211,12 +197,13 @@ router.post('/', async (req, res, next) => {
       GROUP BY p.id, c.name
     `, [post.id]);
 
+    const row = finalResult.rows[0];
     const finalPost = {
-      ...finalResult.rows[0],
-      media: finalResult.rows[0].media[0] === null ? [] : finalResult.rows[0].media
+      ...row,
+      media: row.media[0] === null ? [] : row.media,
+      category: row.category_id ? { id: row.category_id, name: row.category_name } : null
     };
 
-    console.log('Final response:', finalPost);
     res.status(201).json(finalPost);
   } catch (err) {
     await client.query('ROLLBACK');
@@ -231,51 +218,36 @@ router.post('/', async (req, res, next) => {
 });
 
 // Update post
-router.put('/:id', async (req, res, next) => {
+router.put('/:id', adminAuth, async (req, res, next) => {
   const client = await pool.connect();
   try {
-    console.log('Received update request body:', req.body);
-    
     await client.query('BEGIN');
     
     const { title, content, category_id, media } = req.body;
-    console.log('Extracted update data:', { title, content, category_id, mediaCount: media?.length });
     
     if (!title || !content || !category_id) {
       throw new Error('Required data is incomplete');
     }
     
-    // Validate media URLs
-    function validateMediaUrl(url, type) {
-        if (!url) return false;
-        
-        // Check if URL starts with the correct path
-        if (!url.startsWith('/api/posts/uploads/')) {
-            return false;
-        }
-        
-        // Validate file type based on URL
-        if (type === 'image' && !url.match(/\.(jpg|jpeg|png|gif)$/i)) {
-            return false;
-        }
-        if (type === 'video' && !url.match(/\.(mp4|webm|ogg)$/i)) {
-            return false;
-        }
-        
-        return true;
-    }
+    // Validate media paths
+    const validateMediaUrl = (url, type) => {
+      if (type === 'image') {
+        return url.startsWith('/api/posts/uploads/images/');
+      } else if (type === 'video') {
+        return url.startsWith('/api/posts/uploads/videos/posts/');
+      }
+      return false;
+    };
 
     // Validate all media items
     if (media && media.length > 0) {
-      console.log('Validating media items:', media);
       const invalidMedia = media.find(item => !validateMediaUrl(item.media_url, item.media_type));
       if (invalidMedia) {
-        throw new Error(`Invalid media URL: ${invalidMedia.media_url}`);
+        throw new Error(`Invalid media path: ${invalidMedia.media_url}`);
       }
     }
     
     // Update post
-    console.log('Updating post with values:', [title, content, category_id, req.params.id]);
     const postResult = await client.query(`
       UPDATE posts 
       SET title = $1, content = $2, category_id = $3, updated_at = CURRENT_TIMESTAMP
@@ -288,7 +260,6 @@ router.put('/:id', async (req, res, next) => {
     }
     
     const post = postResult.rows[0];
-    console.log('Post updated:', post);
 
     // Delete old media
     await client.query('DELETE FROM post_media WHERE post_id = $1', [post.id]);
@@ -296,12 +267,6 @@ router.put('/:id', async (req, res, next) => {
     // Add new media
     if (media && media.length > 0) {
       for (const item of media) {
-        console.log('Adding media:', { 
-          postId: post.id, 
-          mediaUrl: item.media_url, 
-          mediaType: item.media_type 
-        });
-        
         await client.query(`
           INSERT INTO post_media (post_id, media_url, media_type) 
           VALUES ($1, $2, $3)
@@ -315,7 +280,7 @@ router.put('/:id', async (req, res, next) => {
 
     await client.query('COMMIT');
     
-    // Get updated post with associated media
+    // Fetch updated post with associated media
     const finalResult = await client.query(`
       SELECT 
         p.*,
@@ -334,12 +299,13 @@ router.put('/:id', async (req, res, next) => {
       GROUP BY p.id, c.name
     `, [post.id]);
 
+    const row = finalResult.rows[0];
     const finalPost = {
-      ...finalResult.rows[0],
-      media: finalResult.rows[0].media[0] === null ? [] : finalResult.rows[0].media
+      ...row,
+      media: row.media[0] === null ? [] : row.media,
+      category: row.category_id ? { id: row.category_id, name: row.category_name } : null
     };
 
-    console.log('Final response:', finalPost);
     res.json(finalPost);
   } catch (err) {
     await client.query('ROLLBACK');
@@ -354,7 +320,7 @@ router.put('/:id', async (req, res, next) => {
 });
 
 // Delete post and associated media
-router.delete('/:id', async (req, res, next) => {
+router.delete('/:id', adminAuth, async (req, res, next) => {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -370,7 +336,12 @@ router.delete('/:id', async (req, res, next) => {
     // Delete media files from storage
     for (const media of mediaResult.rows) {
       try {
-        fs.unlinkSync(media.media_url);
+        // Convert API URL path to filesystem path
+        // e.g. /api/posts/uploads/images/xxx.jpg -> ./uploads/images/xxx.jpg
+        const filePath = media.media_url
+          .replace('/api/posts/uploads/', './uploads/')
+          .replace('/api/videos/', './uploads/videos/');
+        fs.unlinkSync(filePath);
       } catch (err) {
         console.error(`Failed to delete file: ${media.media_url}`, err);
       }
@@ -398,3 +369,4 @@ router.delete('/:id', async (req, res, next) => {
 });
 
 module.exports = router;
+

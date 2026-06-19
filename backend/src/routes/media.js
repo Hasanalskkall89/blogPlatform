@@ -25,14 +25,14 @@ const storage = multer.diskStorage({
         fs.mkdirSync(uploadPath, { recursive: true });
       }
 
-      // Test write permissions
+      // Test permissions
       try {
         const testFile = path.join(uploadPath, '.write-test');
         fs.writeFileSync(testFile, '');
         fs.unlinkSync(testFile);
       } catch (err) {
         console.error('Upload directory write test failed:', err);
-        return cb(new Error('Failed to write to upload directory'));
+        return cb(new Error('Cannot write to upload directory'));
       }
 
       cb(null, uploadPath);
@@ -59,7 +59,7 @@ const fileFilter = (req, file, cb) => {
   try {
     const allowedTypes = config.upload.allowedTypes;
     if (!allowedTypes.includes(file.mimetype)) {
-      return cb(new Error('Unsupported file type: ' + file.mimetype), false);
+      return cb(new Error('File type not supported: ' + file.mimetype), false);
     }
     cb(null, true);
   } catch (err) {
@@ -95,19 +95,18 @@ router.post('/upload/', adminAuth, (req, res) => {
         });
       }
 
-      // Create direct file link
-      const baseUrl = process.env.API_URL || 'http://localhost:3000/api';
+      // Create direct file URL (relative path)
       let fileUrl;
 
       // Determine URL type based on file type and location
       if (req.file.mimetype.startsWith('image/')) {
-        fileUrl = `${baseUrl}/posts/uploads/images/${req.file.filename}`;
+        fileUrl = `/api/posts/uploads/images/${req.file.filename}`;
       } else if (req.file.mimetype.startsWith('video/')) {
         const videoType = req.body.videoType || 'post';
         if (videoType === 'standalone') {
-          fileUrl = `${baseUrl}/videos/standalone/${req.file.filename}`;
+          fileUrl = `/api/videos/standalone/${req.file.filename}`;
         } else {
-          fileUrl = `${baseUrl}/posts/uploads/videos/posts/${req.file.filename}`;
+          fileUrl = `/api/posts/uploads/videos/posts/${req.file.filename}`;
         }
       }
 
@@ -131,7 +130,7 @@ router.post('/upload/', adminAuth, (req, res) => {
   });
 });
 
-// List all media files by type
+// Get file list by type
 router.get('/list/:type/', adminAuth, (req, res) => {
   try {
     const { type } = req.params; // 'images', 'videos'
@@ -150,7 +149,6 @@ router.get('/list/:type/', adminAuth, (req, res) => {
     }
 
     const files = [];
-    const baseUrl = process.env.API_URL || 'http://localhost:3000/api';
 
     // Read files from specified directory
     const readFilesRecursively = (dir) => {
@@ -171,12 +169,12 @@ router.get('/list/:type/', adminAuth, (req, res) => {
 
           // Determine URL type based on path
           if (pathParts[0] === 'images') {
-            fileUrl = `${baseUrl}/posts/uploads/images/${item}`;
+            fileUrl = `/api/posts/uploads/images/${item}`;
           } else if (pathParts[0] === 'videos') {
             if (pathParts[1] === 'standalone') {
-              fileUrl = `${baseUrl}/videos/standalone/${item}`;
+              fileUrl = `/api/videos/standalone/${item}`;
             } else if (pathParts[1] === 'posts') {
-              fileUrl = `${baseUrl}/posts/uploads/videos/posts/${item}`;
+              fileUrl = `/api/posts/uploads/videos/posts/${item}`;
             }
           }
 
@@ -205,7 +203,7 @@ router.get('/list/:type/', adminAuth, (req, res) => {
     console.error('Error listing files:', error);
     res.status(500).json({
       success: false,
-      message: 'Error listing files'
+      message: 'Error fetching file list'
     });
   }
 });
@@ -216,7 +214,7 @@ router.delete('/:filename/', adminAuth, (req, res) => {
     const { filename } = req.params;
     const baseUploadPath = path.resolve(config.upload.path);
     
-    // Find and delete file in all directories
+    // Search for file in all directories
     const findAndDeleteFile = (dir) => {
       if (!fs.existsSync(dir)) {
         return false;
@@ -263,3 +261,4 @@ router.delete('/:filename/', adminAuth, (req, res) => {
 });
 
 module.exports = router;
+

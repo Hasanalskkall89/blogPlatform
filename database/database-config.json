@@ -13,9 +13,9 @@
       "restart": "unless-stopped",
       "port": "5432:5432",
       "environment": {
-        "POSTGRES_DB": "${DB_NAME}",
-        "POSTGRES_USER": "${DB_USER}",
-        "POSTGRES_PASSWORD": "${DB_PASSWORD}"
+        "POSTGRES_DB": "blog",
+        "POSTGRES_USER": "admin",
+        "POSTGRES_PASSWORD": "your_secure_password"
       },
       "volumes": [
         {
@@ -33,23 +33,23 @@
   },
   "maintenance": {
     "backup": {
-      "command": "docker exec blog-db pg_dump -U ${DB_USER} ${DB_NAME} > ./backups/backup_$(date +%Y%m%d_%H%M%S).sql",
+      "command": "docker exec blog-db pg_dump -U admin blog > ./backups/backup_$(date +%Y%m%d_%H%M%S).sql",
       "schedule": "0 0 * * *",
       "description": "Daily backup at midnight"
     },
     "restore": {
-      "command": "docker exec -i blog-db psql -U ${DB_USER} ${DB_NAME} < ./backups/[backup_file_name].sql",
+      "command": "docker exec -i blog-db psql -U admin blog < ./backups/[backup_file_name].sql",
       "description": "Restore database from backup file"
     }
   },
   "commands": {
     "build": "docker build -t blog-db:latest .",
-    "start": "docker run -d --name blog-db --restart unless-stopped -p 5432:5432 -v blog-data:/var/lib/postgresql/data -v blog-backups:/backups -e POSTGRES_DB=${DB_NAME} -e POSTGRES_USER=${DB_USER} -e POSTGRES_PASSWORD=${DB_PASSWORD} blog-db:latest",
+    "start": "docker run -d --name blog-db --restart unless-stopped -p 5432:5432 -v blog-data:/var/lib/postgresql/data -v blog-backups:/backups -e POSTGRES_DB=blog -e POSTGRES_USER=admin -e POSTGRES_PASSWORD=your_secure_password blog-db:latest",
     "stop": "docker stop blog-db",
     "remove": "docker rm blog-db",
     "logs": "docker logs blog-db",
     "shell": "docker exec -it blog-db bash",
-    "psql": "docker exec -it blog-db psql -U ${DB_USER} ${DB_NAME}"
+    "psql": "docker exec -it blog-db psql -U admin -d blog"
   },
   "volumes": {
     "data": {
@@ -78,7 +78,7 @@
       },
       {
         "description": "Start database container",
-        "command": "docker run -d --name blog-db --restart unless-stopped -p 5432:5432 -v blog-data:/var/lib/postgresql/data -v blog-backups:/backups -e POSTGRES_DB=${DB_NAME} -e POSTGRES_USER=${DB_USER} -e POSTGRES_PASSWORD=${DB_PASSWORD} blog-db:latest"
+        "command": "docker run -d --name blog-db --restart unless-stopped -p 5432:5432 -v blog-data:/var/lib/postgresql/data -v blog-backups:/backups -e POSTGRES_DB=blog -e POSTGRES_USER=admin -e POSTGRES_PASSWORD=your_secure_password blog-db:latest"
       }
     ]
   }

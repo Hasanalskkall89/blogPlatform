@@ -1,21 +1,24 @@
 import { IBM_Plex_Sans_Arabic } from 'next/font/google'
 import './globals.css'
+import { ThemeProvider } from '@/context/ThemeContext'
 
 const ibmPlexSansArabic = IBM_Plex_Sans_Arabic({
-  weight: ['100', '200', '300', '400', '500', '600', '700'],
+  weight: ['300', '400', '500', '600', '700'],
   subsets: ['arabic', 'latin'],
 })
 
 export const metadata = {
-  title: 'Admin Dashboard - blog',
-  description: 'Admin Dashboard for blog',
+  title: 'Dashboard - Blog Platform',
+  description: 'Admin Dashboard for Blog Platform',
 }
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="ar" dir="rtl">
+    <html lang="en" dir="ltr" suppressHydrationWarning>
       <body className={ibmPlexSansArabic.className}>
-        {children}
+        <ThemeProvider>
+          {children}
+        </ThemeProvider>
       </body>
     </html>
   )

@@ -1,5 +1,7 @@
 # SSL Certificates Information
 
+> **WARNING:** The files in this directory (`server.crt`, `server.key`) are example keys for demonstration only. **DO NOT use them** - they are publicly exposed and not safe for actual use.
+
 ⚠️ **IMPORTANT NOTICE** ⚠️
 
 These SSL certificates and private keys are for **TESTING AND DEVELOPMENT PURPOSES ONLY**.

@@ -1,12 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { Pool } = require('pg');
-const config = require('../config');
-
-const pool = new Pool({
-  connectionString: config.database.connectionString,
-  ssl: config.database.ssl
-});
+const { pool } = require('../db');
 
 router.get('/', async (req, res) => {
   try {
@@ -47,9 +41,10 @@ router.get('/', async (req, res) => {
     console.error('Error fetching stats:', error);
     res.status(500).json({
       success: false,
-      message: 'Error fetching statistics'
+      message: 'Error fetching stats'
     });
   }
 });
 
 module.exports = router;
+

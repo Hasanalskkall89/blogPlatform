@@ -1,30 +1,26 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { HiPhotograph, HiVideoCamera, HiX } from 'react-icons/hi';
+import { HiPhotograph, HiVideoCamera, HiX, HiUpload, HiCheck } from 'react-icons/hi';
+import { API_URL } from '@/config';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function MediaSelector({ onSelect, selectedUrls = [], maxSelections = 5, type = 'images' }) {
   const [isOpen, setIsOpen] = useState(false);
   const [files, setFiles] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState(null);
+  const { fetchWithAuth } = useAuth();
 
   const fetchFiles = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/media/list/${type}/`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch files');
-      }
-
+      setError(null);
+      const response = await fetchWithAuth(`${API_URL}/media/list/${type}/`);
+      if (!response.ok) throw new Error('Failed to fetch files');
       const data = await response.json();
-      setFiles(data.files);
+      setFiles(data.files || []);
     } catch (err) {
       console.error('Error fetching files:', err);
       setError(err.message);
@@ -34,162 +30,151 @@ export default function MediaSelector({ onSelect, selectedUrls = [], maxSelectio
   };
 
   useEffect(() => {
-    if (isOpen) {
-      fetchFiles();
-    }
+    if (isOpen) fetchFiles();
   }, [isOpen]);
 
   const handleSelect = (url) => {
     if (selectedUrls.includes(url)) {
-      onSelect(selectedUrls.filter(selectedUrl => selectedUrl !== url));
+      onSelect(selectedUrls.filter(u => u !== url));
     } else if (selectedUrls.length < maxSelections) {
       onSelect([...selectedUrls, url]);
-    } else {
-      alert(`You can select up to ${maxSelections} files`);
     }
   };
 
   const handleFileUpload = async (event) => {
-    const files = event.target.files;
-    if (!files || files.length === 0) return;
+    const uploadFiles = event.target.files;
+    if (!uploadFiles || uploadFiles.length === 0) return;
 
-    if (selectedUrls.length + files.length > maxSelections) {
-      alert(`You can select up to ${maxSelections} files`);
-      return;
+    setUploading(true);
+    try {
+      for (const file of Array.from(uploadFiles)) {
+        const formData = new FormData();
+        formData.append('file', file);
+        if (file.type.startsWith('video/')) {
+          formData.append('videoType', 'post');
+        }
+
+        const response = await fetchWithAuth(`${API_URL}/media/upload/`, {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!response.ok) throw new Error('Failed to upload file');
+
+        const data = await response.json();
+        if (data.success && data.file) {
+          const cleanUrl = data.file.url.replace(/^https?:\/\/[^\/]+/, '');
+          if (selectedUrls.length < maxSelections) {
+            onSelect([...selectedUrls, cleanUrl]);
+          }
+        }
+      }
+      if (isOpen) fetchFiles();
+    } catch (err) {
+      console.error('Error uploading file:', err);
+      setError(err.message);
+    } finally {
+      setUploading(false);
+      event.target.value = '';
     }
+  };
 
-    const newFiles = Array.from(files);
-    onSelect([...selectedUrls, ...newFiles]);
+  const removeItem = (url) => {
+    onSelect(selectedUrls.filter(u => u !== url));
   };
 
   return (
     <div className="relative">
-      {/* Upload files button */}
-      <div className="flex gap-4">
+      <div className="flex flex-wrap gap-2 sm:gap-3">
         <button
           type="button"
           onClick={() => setIsOpen(true)}
-          className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+          className="flex items-center gap-2 px-3 sm:px-4 py-2 border border-gray-200 dark:border-gray-600 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm transition-colors"
         >
-          {type === 'images' ? (
-            <HiPhotograph className="h-5 w-5" />
-          ) : (
-            <HiVideoCamera className="h-5 w-5" />
-          )}
-          Choose from Library
+          {type === 'images' ? <HiPhotograph className="h-4 w-4" /> : <HiVideoCamera className="h-4 w-4" />}
+          Select from Library
         </button>
 
-        <label className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer">
+        <label className="flex items-center gap-2 px-3 sm:px-4 py-2 border border-gray-200 dark:border-gray-600 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 cursor-pointer text-sm transition-colors">
           <input
             type="file"
             multiple
             accept={type === 'images' ? 'image/*' : 'video/*'}
             onChange={handleFileUpload}
             className="hidden"
+            disabled={uploading}
           />
-          {type === 'images' ? (
-            <HiPhotograph className="h-5 w-5" />
-          ) : (
-            <HiVideoCamera className="h-5 w-5" />
-          )}
-          Upload new {type === 'images' ? 'images' : 'videos'}
+          <HiUpload className="h-4 w-4" />
+          {uploading ? 'Uploading...' : `Upload ${type === 'images' ? 'Images' : 'Videos'}`}
         </label>
       </div>
 
-      {/* Media selection window */}
+      {/* Modal */}
       {isOpen && (
         <div className="fixed inset-0 z-50 overflow-y-auto">
           <div className="flex items-center justify-center min-h-screen p-4">
-            {/* Dark overlay */}
-            <div
-              className="fixed inset-0 bg-black bg-opacity-50 transition-opacity"
-              onClick={() => setIsOpen(false)}
-            ></div>
+            <div className="fixed inset-0 bg-black/50" onClick={() => setIsOpen(false)} />
 
-            {/* Window content */}
-            <div className="relative bg-white rounded-lg shadow-xl max-w-3xl w-full p-6">
+            <div className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-3xl w-full p-4 sm:p-6">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-medium">
+                <h3 className="text-lg font-semibold text-gray-800 dark:text-white">
                   Select {type === 'images' ? 'Images' : 'Videos'}
                 </h3>
-                <button
-                  onClick={() => setIsOpen(false)}
-                  className="text-gray-400 hover:text-gray-500"
-                >
-                  <HiX className="h-6 w-6" />
+                <button onClick={() => setIsOpen(false)} className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700">
+                  <HiX className="h-5 w-5" />
                 </button>
               </div>
 
               {error && (
-                <div className="bg-red-50 text-red-600 p-4 rounded-lg mb-4">
+                <div className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 p-3 rounded-xl mb-4 text-sm">
                   {error}
                 </div>
               )}
 
               {loading ? (
-                <div className="flex justify-center items-center h-64">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+                <div className="flex justify-center items-center h-48">
+                  <div className="animate-spin rounded-full h-8 w-8 border-2 border-indigo-600 border-t-transparent" />
+                </div>
+              ) : files.length === 0 ? (
+                <div className="text-center py-12 text-gray-500 dark:text-gray-400">
+                  No files found
                 </div>
               ) : (
-                <div className="grid grid-cols-3 gap-4 max-h-96 overflow-y-auto">
-                  {files.map((file, index) => (
-                    <div
-                      key={index}
-                      onClick={() => handleSelect(file.url)}
-                      className={`relative cursor-pointer group ${
-                        selectedUrls.includes(file.url)
-                          ? 'ring-2 ring-indigo-600'
-                          : ''
-                      }`}
-                    >
-                      {type === 'images' ? (
-                        <img
-                          src={file.url}
-                          alt={file.filename}
-                          className="w-full h-32 object-cover rounded-lg"
-                        />
-                      ) : (
-                        <video
-                          src={file.url}
-                          className="w-full h-32 object-cover rounded-lg"
-                        />
-                      )}
-                      
-                      {/* Selection effect */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 max-h-80 overflow-y-auto p-1">
+                  {files.map((file, index) => {
+                    const isSelected = selectedUrls.includes(file.url);
+                    return (
                       <div
-                        className={`absolute inset-0 bg-black ${
-                          selectedUrls.includes(file.url)
-                            ? 'bg-opacity-50'
-                            : 'bg-opacity-0 group-hover:bg-opacity-25'
-                        } transition-opacity rounded-lg flex items-center justify-center`}
+                        key={index}
+                        onClick={() => handleSelect(file.url)}
+                        className={`relative cursor-pointer group rounded-xl overflow-hidden border-2 transition-all ${
+                          isSelected ? 'border-indigo-500 shadow-md' : 'border-transparent hover:border-gray-300 dark:hover:border-gray-600'
+                        }`}
                       >
-                        {selectedUrls.includes(file.url) && (
-                          <svg
-                            className="h-6 w-6 text-white"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M5 13l4 4L19 7"
-                            />
-                          </svg>
+                        {type === 'images' ? (
+                          <img src={file.url} alt={file.filename} className="w-full h-28 sm:h-32 object-cover" />
+                        ) : (
+                          <video src={file.url} className="w-full h-28 sm:h-32 object-cover" />
                         )}
+                        <div className={`absolute inset-0 transition-opacity ${isSelected ? 'bg-indigo-600/30' : 'bg-black/0 group-hover:bg-black/20'}`}>
+                          {isSelected && (
+                            <div className="absolute top-2 right-2 bg-indigo-600 text-white p-1 rounded-full">
+                              <HiCheck className="h-3.5 w-3.5" />
+                            </div>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
 
-              <div className="mt-6 flex justify-end">
+              <div className="mt-4 flex justify-end">
                 <button
                   onClick={() => setIsOpen(false)}
-                  className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700"
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2 rounded-xl text-sm font-medium transition-colors"
                 >
-                  Done
+                  Done ({selectedUrls.length}/{maxSelections})
                 </button>
               </div>
             </div>
@@ -197,34 +182,22 @@ export default function MediaSelector({ onSelect, selectedUrls = [], maxSelectio
         </div>
       )}
 
-      {/* Display selected files */}
+      {/* Selected files preview */}
       {selectedUrls.length > 0 && (
-        <div className="mt-4 grid grid-cols-3 gap-4">
-          {selectedUrls.map((file, index) => (
-            <div key={index} className="relative">
-              {file instanceof File ? (
-                <div className="aspect-w-16 aspect-h-9 bg-gray-100 rounded-lg overflow-hidden">
-                  <img
-                    src={URL.createObjectURL(file)}
-                    alt={file.name}
-                    className="object-cover w-full h-full"
-                  />
-                </div>
+        <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 gap-3">
+          {selectedUrls.filter(url => typeof url === 'string').map((url, index) => (
+            <div key={index} className="relative group rounded-xl overflow-hidden border border-gray-200 dark:border-gray-600">
+              {type === 'images' ? (
+                <img src={url.startsWith('http') ? url : `${API_URL.replace('/api', '')}${url}`} alt="Selected" className="w-full h-24 sm:h-28 object-cover" />
               ) : (
-                <div className="aspect-w-16 aspect-h-9 bg-gray-100 rounded-lg overflow-hidden">
-                  <img
-                    src={file}
-                    alt="Selected media"
-                    className="object-cover w-full h-full"
-                  />
-                </div>
+                <video src={url.startsWith('http') ? url : `${API_URL.replace('/api', '')}${url}`} className="w-full h-24 sm:h-28 object-cover" />
               )}
               <button
                 type="button"
-                onClick={() => handleSelect(file)}
-                className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600"
+                onClick={() => removeItem(url)}
+                className="absolute top-1.5 right-1.5 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 hover:bg-red-600 transition-all"
               >
-                <HiX className="h-4 w-4" />
+                <HiX className="h-3.5 w-3.5" />
               </button>
             </div>
           ))}
@@ -233,3 +206,4 @@ export default function MediaSelector({ onSelect, selectedUrls = [], maxSelectio
     </div>
   );
 }
+

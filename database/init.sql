@@ -89,7 +89,7 @@ create table comments (
 CREATE INDEX idx_comments_post ON comments(post_id);
 CREATE INDEX idx_comments_created_at ON comments(created_at DESC);
 
--- Likes table: Stores post likes
+-- Likes table: Tracks post likes
 create table likes (
   id bigint primary key generated always as identity,
   post_id bigint references posts (id) on delete cascade,
@@ -118,7 +118,7 @@ CREATE TABLE admins (
 CREATE INDEX idx_admins_username ON admins(username);
 CREATE INDEX idx_admins_email ON admins(email);
 
--- Create default admin user (password: BlogAdmin@2024!)
+-- Create default admin user (change default password after first login)
 INSERT INTO admins (username, password, email) 
-VALUES ('admin', '$2a$10$K8zCg.SAp1OI1nUFk.F7EOyT1/Wd1.QZK2V2MO.yQRsNN/vKUEQry', 'admin@example.com')
+VALUES ('admin', '$2a$10$mj1yXYKGmkuR4bDD0TZ9UOYXjzZWQS3DwQwx8TJy5qFG3tpA3qB6q', 'admin@example.com')
 ON CONFLICT (username) DO NOTHING;

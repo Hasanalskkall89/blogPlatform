@@ -2,28 +2,21 @@
 
 import { useState, useEffect } from 'react';
 import MediaSelector from './MediaSelector';
+import { API_URL } from '@/config';
 
 export default function VideoForm({ initialData, onSubmit, onCancel }) {
   const [title, setTitle] = useState(initialData?.title || '');
   const [description, setDescription] = useState(initialData?.description || '');
-  const [selectedVideo, setSelectedVideo] = useState(initialData?.video_url ? [initialData.video_url] : []);
-  const [showUrlInput, setShowUrlInput] = useState(false);
-  const [videoUrl, setVideoUrl] = useState('');
-  const [error, setError] = useState(null);
+  const [videoUrl, setVideoUrl] = useState(initialData?.video_url || '');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [useMediaLibrary, setUseMediaLibrary] = useState(true);
 
   useEffect(() => {
     if (initialData) {
       setTitle(initialData.title || '');
       setDescription(initialData.description || '');
-      if (initialData.video_url) {
-        if (initialData.video_url.startsWith('http')) {
-          setShowUrlInput(true);
-          setVideoUrl(initialData.video_url);
-        } else {
-          setSelectedVideo([initialData.video_url]);
-        }
-      }
+      setVideoUrl(initialData.video_url || '');
     }
   }, [initialData]);
 
@@ -32,31 +25,21 @@ export default function VideoForm({ initialData, onSubmit, onCancel }) {
     setLoading(true);
     setError(null);
 
-    if (!showUrlInput && !selectedVideo.length) {
-      setError('Please select a video');
-      setLoading(false);
-      return;
-    }
-
-    if (showUrlInput && !videoUrl) {
-      setError('Please enter a video URL');
-      setLoading(false);
-      return;
-    }
-
     try {
-      const finalVideoUrl = showUrlInput ? videoUrl : selectedVideo[0];
-      console.log('Selected video:', finalVideoUrl);
+      if (!title.trim()) throw new Error('Please enter video title');
+      if (!videoUrl.trim()) throw new Error('Please select or enter video URL');
 
-      const videoData = {
-        title,
-        description,
-        video_url: finalVideoUrl
-      };
+      let cleanUrl = videoUrl;
+      if (!cleanUrl.startsWith('http')) {
+        cleanUrl = cleanUrl.replace(/^https?:\/\/[^\/]+/, '');
+        if (!cleanUrl.startsWith('/api')) cleanUrl = '/api' + cleanUrl;
+      }
 
-      console.log('Submitting video data:', videoData);
-      await onSubmit(videoData);
-      onCancel();
+      await onSubmit({
+        title: title.trim(),
+        description: description.trim(),
+        video_url: cleanUrl,
+      });
     } catch (err) {
       console.error('Error submitting video:', err);
       setError(err.message || 'Error saving video');
@@ -65,109 +48,92 @@ export default function VideoForm({ initialData, onSubmit, onCancel }) {
     }
   };
 
+  const getPreviewUrl = (url) => {
+    if (!url) return '';
+    return url.startsWith('http') ? url : `${API_URL.replace('/api', '')}${url}`;
+  };
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="space-y-6">
-        <div>
-          <label htmlFor="title" className="block text-sm font-medium text-gray-700">
-            Title
-          </label>
-          <input
-            type="text"
-            id="title"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            className="mt-1 block w-full px-4 py-2 border border-gray-300 shadow-sm sm:text-sm focus:ring-indigo-500 focus:border-indigo-500 rounded-md border-gray-300"
-            required
-          />
-        </div>
-
-        <div>
-          <label htmlFor="description" className="block text-sm font-medium text-gray-700">
-            Description
-          </label>
-          <textarea
-            id="description"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            rows={3}
-            className="mt-1 block w-full px-4 py-2 border border-gray-300 shadow-sm sm:text-sm focus:ring-indigo-500 focus:border-indigo-500 rounded-md border-gray-300"
-          />
-        </div>
-
-        <div>
-          <label className="p-4 block text-sm font-medium text-gray-700 mb-2">
-            Video
-          </label>
-          <div className="space-y-4">
-            <div className="flex space-x-4 space-x-reverse">
-              <button
-                type="button"
-                onClick={() => setShowUrlInput(false)}
-                className={`px-4 py-2 text-sm font-medium rounded-md ${
-                  !showUrlInput
-                    ? 'bg-indigo-600 text-white'
-                    : 'bg-white text-gray-700 border border-gray-300'
-                }`}
-              >
-                Choose from Library
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowUrlInput(true)}
-                className={`px-4 py-2 text-sm font-medium rounded-md ${
-                  showUrlInput
-                    ? 'bg-indigo-600 text-white'
-                    : 'bg-white text-gray-700 border border-gray-300'
-                }`}
-              >
-                Add URL
-              </button>
-            </div>
-
-            <div className="mt-1 sm:mt-0">
-              {showUrlInput ? (
-                <input
-                  type="url"
-                  value={videoUrl}
-                  onChange={(e) => setVideoUrl(e.target.value)}
-                  className="block w-full px-4 py-2 border border-gray-300 shadow-sm sm:text-sm focus:ring-indigo-500 focus:border-indigo-500 rounded-md border-gray-300"
-                  placeholder="Enter video URL"
-                />
-              ) : (
-                <MediaSelector
-                  type="videos"
-                  selectedUrls={selectedVideo}
-                  onSelect={setSelectedVideo}
-                  maxSelections={1}
-                />
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-
+    <form onSubmit={handleSubmit} className="space-y-4">
       {error && (
-        <div className="rounded-md bg-red-50 p-4">
-          <div className="flex">
-            <div className="text-sm text-red-700">{error}</div>
-          </div>
+        <div className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 p-3 rounded-xl text-sm border border-red-200 dark:border-red-800">
+          {error}
         </div>
       )}
 
-      <div className="mt-5 sm:mt-6 flex justify-end space-x-3 space-x-reverse">
-        <button
-          type="button"
-          onClick={onCancel}
-          className="bg-white py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-          disabled={loading}
-        >
+      <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Video Title</label>
+        <input
+          type="text"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+          required
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Video Description</label>
+        <textarea
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          rows="3"
+          className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Video URL</label>
+        <div className="flex gap-2 mb-3">
+          <button
+            type="button"
+            onClick={() => setUseMediaLibrary(true)}
+            className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
+              useMediaLibrary ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300' : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
+            }`}
+          >
+            From Media Library
+          </button>
+          <button
+            type="button"
+            onClick={() => setUseMediaLibrary(false)}
+            className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
+              !useMediaLibrary ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300' : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
+            }`}
+          >
+            Direct URL
+          </button>
+        </div>
+
+        {useMediaLibrary ? (
+          <MediaSelector type="videos" selectedUrls={videoUrl ? [videoUrl] : []} onSelect={(urls) => setVideoUrl(urls[0] || '')} maxSelections={1} />
+        ) : (
+          <input
+            type="text"
+            value={videoUrl}
+            onChange={(e) => setVideoUrl(e.target.value)}
+            placeholder="Enter video URL"
+            className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+            dir="ltr"
+          />
+        )}
+      </div>
+
+      {videoUrl && (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Preview</label>
+          <video src={getPreviewUrl(videoUrl)} controls className="w-full rounded-xl" />
+        </div>
+      )}
+
+      <div className="flex justify-end gap-2 pt-2">
+        <button type="button" onClick={onCancel} className="px-4 py-2 text-sm text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
           Cancel
         </button>
         <button
           type="submit"
-          className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
           disabled={loading}
+          className="px-5 py-2 text-sm text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 rounded-xl shadow-lg shadow-indigo-500/25 disabled:opacity-50 transition-all font-medium"
         >
           {loading ? 'Saving...' : initialData ? 'Update' : 'Add'}
         </button>
@@ -175,3 +141,4 @@ export default function VideoForm({ initialData, onSubmit, onCancel }) {
     </form>
   );
 }
+

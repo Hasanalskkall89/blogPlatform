@@ -2,16 +2,11 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { Pool } = require('pg');
 const { body } = require('express-validator');
 const { validate } = require('../middleware/validators');
 const config = require('../config');
 const { verifyToken } = require('../middleware/auth');
-
-const pool = new Pool({
-  connectionString: config.database.connectionString,
-  ssl: config.database.ssl
-});
+const { pool } = require('../db');
 
 // Login validation rules
 const loginValidation = [
